@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tower of Hanoi - Prolog</title>
+<style>
+  :root { --t: 250ms; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; overflow-x: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: "Segoe UI", Arial, sans-serif; color: #fff;
+    background: linear-gradient(135deg, #1e1b4b, #4c1d95 50%, #0f766e);
+    background-size: 200% 200%; animation: bgmove 14s ease infinite;
+  }
+  @keyframes bgmove { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  .star { position: fixed; border-radius: 50%; background: #fff; animation: twinkle 3s ease-in-out infinite; z-index: 0; }
+  @keyframes twinkle { 0%,100% { opacity: .1; } 50% { opacity: .9; } }
+
+  h1 {
+    margin: 0 0 6px; font-size: 40px; letter-spacing: 3px; z-index: 1;
+    background: linear-gradient(90deg, #fde68a, #f472b6, #38bdf8, #fde68a);
+    background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: shine 6s linear infinite;
+  }
+  @keyframes shine { to { background-position: 300% 0; } }
+  #info { padding: 6px 18px; border-radius: 20px; background: rgba(255,255,255,0.15); font-size: 15px; z-index: 1; }
+  #msg { height: 26px; margin: 8px 0; font-size: 16px; color: #fde68a; z-index: 1; }
+  #msg.bad { color: #fca5a5; }
+
+  #stage {
+    position: relative; width: 700px; height: 340px; z-index: 1;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    user-select: none; -webkit-user-select: none;
+  }
+  #stage.nt .disk { transition: none; }
+  .base {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: 12px; border-radius: 0 0 20px 20px;
+    background: linear-gradient(90deg, #f5c26b, #fde68a, #f5c26b);
+  }
+  .pole {
+    position: absolute; bottom: 12px; width: 10px; height: 270px; border-radius: 6px 6px 0 0;
+    background: linear-gradient(90deg, #fde68a, #f5c26b);
+    box-shadow: 0 0 10px rgba(245,194,107,0.5);
+  }
+  .disk {
+    position: absolute; height: 24px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.5);
+    transition: left var(--t) ease-in-out, bottom var(--t) ease-in-out;
+    touch-action: none;
+  }
+  .disk.top { cursor: grab; }
+  .disk.top:hover { box-shadow: 0 0 16px 3px rgba(255,255,255,.7), inset 0 2px 4px rgba(255,255,255,0.5); }
+  .disk.drag { transition: none; cursor: grabbing; z-index: 10; box-shadow: 0 0 26px 7px rgba(255,255,255,.8); }
+  .disk.shake { animation: shake .4s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-10px); } 40%,80% { transform: translateX(10px); } }
+
+  .labels { display: flex; width: 700px; z-index: 1; }
+  .labels div { flex: 1; text-align: center; font-size: 13px; opacity: .7; padding-top: 8px; }
+
+  #buttons { margin-top: 16px; z-index: 1; display: flex; align-items: center; flex-wrap: wrap; justify-content: center; }
+  button, select {
+    font-size: 16px; padding: 10px 22px; margin: 4px; border: none; border-radius: 25px;
+    color: #fff; cursor: pointer; font-weight: 600;
+    background: linear-gradient(135deg, #f472b6, #8b5cf6);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3); transition: transform .15s;
+  }
+  button:hover { transform: translateY(-2px) scale(1.06); }
+  button.alt { background: linear-gradient(135deg, #38bdf8, #14b8a6); }
+  select { background: #334155; padding: 10px 14px; }
+
+  .confetti { position: fixed; top: -20px; width: 10px; height: 14px; z-index: 50; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: .8; } }
+</style>
+</head>
+<body>
+  <h1>Tower of Hanoi</h1>
+  <div id="info"></div>
+  <div id="msg"></div>
+
+  <div id="stage">
+    <div class="pole" style="left:110px"></div>
+    <div class="pole" style="left:360px"></div>
+    <div class="pole" style="left:610px"></div>
+    <div class="base"></div>
+  </div>
+  <div class="labels"><div>Peg 1</div><div>Peg 2</div><div>Peg 3</div></div>
+
+  <div id="buttons">
+    <select id="count" onchange="newGame(+this.value)">
+      <option value="3">3 disks</option>
+      <option value="4">4 disks</option>
+      <option value="5">5 disks</option>
+      <option value="6">6 disks</option>
+      <option value="7">7 disks</option>
+    </select>
+    <button onclick="newGame(N)">Reset</button>
+    <button class="alt" onclick="autoSolve()">Auto Solve (Prolog)</button>
+  </div>
+
+  <script>
+    const COLORS = ["#f43f5e", "#f97316", "#facc15", "#22c55e", "#06b6d4", "#3b82f6", "#a855f7", "#ec4899"];
+    const PEG_X = i => 115 + i * 250;      // middle of each peg
+    const BASE = 12, H = 27;
+    const stage = document.getElementById("stage");
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    let N = 3, pegs, moves = 0, disks = {}, busy = false, solving = false, drag = null;
+
+    // twinkling stars
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement("div");
+      s.className = "star";
+      const size = 1 + Math.random() * 2;
+      s.style.cssText = "left:" + Math.random() * 100 + "vw;top:" + Math.random() * 100 + "vh;width:" +
+        size + "px;height:" + size + "px;animation-delay:" + Math.random() * 3 + "s";
+      document.body.appendChild(s);
+    }
+
+    function widthOf(size) { return 50 + size * 22; }
+
+    function say(text, bad) {
+      const m = document.getElementById("msg");
+      m.textContent = text;
+      m.className = bad ? "bad" : "";
+    }
+
+    // pegs = [[1,2,3],[],[]]  -> first item of each list is the TOP disk
+    function newGame(n) {
+      N = n; moves = 0; solving = false; busy = false; drag = null;
+      Object.values(disks).forEach(d => d.remove());
+      disks = {};
+      pegs = [[], [], []];
+      for (let s = 1; s <= N; s++) {
+        pegs[0].push(s);
+        const d = document.createElement("div");
+        d.className = "disk";
+        d.textContent = s;
+        d.style.width = widthOf(s) + "px";
+        d.style.background = COLORS[(s - 1) % COLORS.length];
+        d.addEventListener("pointerdown", e => startDrag(e, s));
+        d.addEventListener("pointermove", moveDrag);
+        d.addEventListener("pointerup", endDrag);
+        d.addEventListener("pointercancel", () => { drag = null; render(); });
+        stage.appendChild(d);
+        disks[s] = d;
+      }
+      stage.classList.add("nt");
+      render();
+      stage.offsetHeight;                 // apply instantly, no animation
+      stage.classList.remove("nt");
+      say("Drag the top disk with your mouse and drop it on another peg.", false);
+    }
+
+    function render() {
+      pegs.forEach((peg, p) => {
+        peg.forEach((size, i) => {
+          const d = disks[size];
+          d.style.left = (PEG_X(p) - widthOf(size) / 2) + "px";
+          d.style.bottom = (BASE + (peg.length - 1 - i) * H) + "px";
+          d.classList.toggle("top", i === 0);
+        });
+      });
+      document.getElementById("info").textContent =
+        N + " disks  |  Moves: " + moves + "  |  Minimum: " + (Math.pow(2, N) - 1);
+    }
+
+    // ---------- mouse drag and drop ----------
+    function startDrag(e, size) {
+      if (busy) return;
+      const from = pegs.findIndex(peg => peg[0] === size);
+      if (from === -1) {
+        say("Only the top disk can be moved.", true);
+        shake(disks[size]);
+        return;
+      }
+      drag = { size: size, from: from, el: disks[size] };
+      drag.el.classList.add("drag");
+      drag.el.setPointerCapture(e.pointerId);
+      moveDrag(e);
+    }
+
+    function moveDrag(e) {
+      if (!drag) return;
+      const r = stage.getBoundingClientRect();
+      drag.el.style.left = (e.clientX - r.left - widthOf(drag.size) / 2) + "px";
+      drag.el.style.bottom = (r.bottom - e.clientY - 12) + "px";
+    }
+
+    async function endDrag(e) {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      d.el.classList.remove("drag");
+      const r = stage.getBoundingClientRect();
+      let to = Math.floor((e.clientX - r.left) / (r.width / 3));   // which third did we drop in?
+      to = Math.max(0, Math.min(2, to));
+      if (to === d.from) { render(); return; }
+      await askProlog(d.from, d.el, to);
+    }
+
+    function shake(el) {
+      el.classList.add("shake");
+      setTimeout(() => el.classList.remove("shake"), 400);
+    }
+
+    // ---------- ask the Prolog server if the move is legal ----------
+    async function askProlog(from, el, to) {
+      busy = true;
+      let won = false;
+      try {
+        const res = await fetch("/move", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pegs: pegs, from: from + 1, to: to + 1 })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          pegs = data.pegs;
+          moves++;
+          say("Prolog says: valid move \u2714", false);
+          won = pegs[2].length === N;
+        } else {
+          say("Prolog says: " + data.message, true);
+          shake(el);
+        }
+      } catch (err) {
+        say("Can't reach the Prolog server. Is it running?", true);
+      }
+      busy = false;
+      render();
+      if (won) win();
+    }
+
+    // ---------- Prolog solves it, the page plays the moves ----------
+    async function autoSolve() {
+      newGame(N);
+      busy = true; solving = true;
+      say("Asking Prolog for the solution...", false);
+      const res = await fetch("/solve?n=" + N);
+      const data = await res.json();
+      for (const [f, t] of data.moves) {
+        if (!solving) return;
+        const size = pegs[f - 1].shift();
+        pegs[t - 1].unshift(size);
+        moves++;
+        render();
+        say("Move disk " + size + ": Peg " + f + " \u2192 Peg " + t, false);
+        await sleep(600);
+      }
+      busy = false; solving = false;
+      win();
+    }
+
+    function win() {
+      say("Solved in " + moves + " moves! (minimum is " + (Math.pow(2, N) - 1) + ")", false);
+      for (let i = 0; i < 90; i++) {
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = Math.random() * 100 + "vw";
+        c.style.background = COLORS[i % COLORS.length];
+        c.style.animationDuration = (2 + Math.random() * 2.5) + "s";
+        c.style.animationDelay = Math.random() * 0.8 + "s";
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 6000);
+      }
+    }
+
+    newGame(3);
+  </script>
+</body>
+</html>
